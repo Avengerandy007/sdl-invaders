@@ -1,4 +1,3 @@
-using System.Numerics;
 using static SDL2.SDL;
 using static SDL2.SDL_image;
 
@@ -21,6 +20,7 @@ static class ObjectLogic{
 //Describes the player object
 class Player : IObjects{
 	
+	#region Display
 	IntPtr surface;
 	IntPtr texture;
 	SDL_Rect rect;
@@ -58,6 +58,18 @@ class Player : IObjects{
 	public void CleanUp(){
 		SDL_DestroyTexture(texture);
 	} 
+	#endregion
+
+
+	//If is called with true then move left otherwise right
+	public void Move(bool left){
+		if (left){
+			position -= 10;
+		}else{
+			position += 10;
+		}
+		rect.x = position;
+	}
 }
 
 class Enemy : IObjects{
@@ -70,7 +82,7 @@ class Enemy : IObjects{
 
 	}
 
-	void IObjects.CleanUp(){
+	public void CleanUp(){
 
 	}
 }
