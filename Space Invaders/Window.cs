@@ -58,7 +58,8 @@ public static class Window{
 
 				case SDL_EventType.SDL_KEYDOWN:
 					if (e.key.keysym.sym == SDL_Keycode.SDLK_LEFT) Program.player.Move(true);
-					if (e.key.keysym.sym == SDL_Keycode.SDLK_RIGHT) Program.player.Move(false);
+					else if (e.key.keysym.sym == SDL_Keycode.SDLK_RIGHT) Program.player.Move(false);
+					else if (e.key.keysym.sym == SDL_Keycode.SDLK_SPACE) Program.player.FireProjectile();
 				break;
 			}
 		}
