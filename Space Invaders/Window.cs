@@ -1,12 +1,12 @@
 using static SDL2.SDL;
 
 //Static class that describes the game window
-static class Window{
+public static class Window{
 	
 	static bool running; //If true then continue loop
 
-	static IntPtr window;
-	static IntPtr renderer;
+	public static IntPtr window;
+	public static IntPtr renderer;
 
 	//Intialise all the needed components for window
 	public static void Setup(){
@@ -44,7 +44,7 @@ static class Window{
 	static void Render(){
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 		SDL_RenderClear(renderer);
-		//TODO: Render objects
+		ObjectLogic.RenderObjects();
 		SDL_RenderPresent(renderer);
 	}
 
@@ -63,6 +63,7 @@ static class Window{
 	static void CleanUp(){
 		SDL_DestroyWindow(window);
 		SDL_DestroyRenderer(renderer);
+		ObjectLogic.CleanObjects();
 		SDL_Quit();
 		return;
 	}

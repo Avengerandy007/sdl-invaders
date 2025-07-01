@@ -1,8 +1,12 @@
 ﻿using System;
 
-static class Program{
+class Program{
+	
+	public static Player player = new Player();
+
 	public static void Main(){
 		Window.Setup();
+		player.Setup();
 		Window.MainLoop();
 	}
 }
