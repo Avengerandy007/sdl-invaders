@@ -15,6 +15,10 @@ static class ObjectLogic{
 		Program.player.Render();
 		foreach(var projectile in projectiles){
 			projectile.Loop();
+			if (!projectile.exists){
+				projectiles.Remove(projectile);
+				break;
+			}
 		}
 	}
 
@@ -85,7 +89,7 @@ class Player : IObjects{
 
 class Projectile{
 
-	bool exists;
+	public bool exists;
 	bool firedFromplayer;
 	
 	SDL_Rect rect;
@@ -119,6 +123,9 @@ class Projectile{
 		if (!exists) return;
 		Render();
 		Move();
+		if (rect.y < 0){
+			exists = false;
+		}
 	}
 
 	void Render(){
