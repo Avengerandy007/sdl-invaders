@@ -14,7 +14,7 @@ static class ObjectLogic{
 	public static void RenderObjects(){
 		Program.player.Render();
 		foreach(var projectile in projectiles){
-			projectile.Render();
+			projectile.Loop();
 		}
 	}
 
@@ -86,14 +86,16 @@ class Player : IObjects{
 class Projectile{
 
 	bool exists;
+	bool firedFromplayer;
 	
 	SDL_Rect rect;
 
 	Vector2 spawnPosition;
 	
 	//Parameter is to know in which direction to go and what position to spawn at
-	public Projectile(bool firedFromplayer){
+	public Projectile(bool isActivatedbyPlayer){
 		exists = true;
+		firedFromplayer = isActivatedbyPlayer; 
 		if (firedFromplayer){
 			spawnPosition = new Vector2(Program.player.position + 48, 530);
 			Console.WriteLine("Projectile fired");
@@ -107,10 +109,19 @@ class Projectile{
 		};
 	}
 
-	public void Render(){
-		
-		if (!exists) return;
+	void Move(){
+		if (firedFromplayer){
+			rect.y -= 1;
+		}else rect.y += 1;
+	}
 
+	public void Loop(){
+		if (!exists) return;
+		Render();
+		Move();
+	}
+
+	void Render(){
 		SDL_SetRenderDrawColor(Window.renderer, 255, 255, 255, 255);
 		SDL_RenderDrawRect(Window.renderer, ref rect);
 		SDL_RenderFillRect(Window.renderer, ref rect);
