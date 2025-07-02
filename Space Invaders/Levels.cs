@@ -4,6 +4,7 @@ class LevelLogic{
 	
 	public static int currentLevel = 0;
 
+	//Describe all the levels
 	public static Level[] levels = {
 		
 		new Level{
@@ -11,8 +12,8 @@ class LevelLogic{
 			amountOfenemies = 3,
 			enemyPositions = [
 				new Vector2(100, 100),
-				new Vector2(200, 200),
-				new Vector2(500, 500)
+				new Vector2(170, 100),
+				new Vector2(240, 100)
 			]
 		},
 
@@ -22,6 +23,17 @@ class LevelLogic{
 			enemyPositions = [
 				new Vector2(300, 300),
 				new Vector2(400, 300)
+			]
+		},
+
+		new Level{
+			index = 2,
+			amountOfenemies = 4,
+			enemyPositions = [
+				new Vector2(300, 400),
+				new Vector2(400, 400),
+				new Vector2(600, 600),
+				new Vector2(200, 300)
 			]
 		}
 	};
@@ -58,7 +70,7 @@ class Level{
 	//Load all the enemies at the specified coordonates
 	public void Start(){
 		foreach(Vector2 position in enemyPositions){
-			new Enemy(position);
+			ObjectLogic.enemies.Add(new Enemy(position));
 		}
 	}
 }

@@ -1,14 +1,17 @@
 using static SDL2.SDL;
 using static SDL2.SDL_image;
 using System.Numerics;
+using System.Timers;
 
 //Necesary logic for all object
 static class ObjectLogic{
 	
 	public static List<Projectile> projectiles = new List<Projectile>();
+	public static List<Enemy> enemies = new List<Enemy>();
 
 	public static void Setup(){
 		IMG_Init(IMG_InitFlags.IMG_INIT_PNG);
+		Enemy.Setup();
 	}
 
 	public static void RenderObjects(){
@@ -22,10 +25,21 @@ static class ObjectLogic{
 				break;
 			}
 		}
+
+		foreach(var enemy in enemies){
+			enemy.Render();
+			if (enemy.WasHit()){
+				Program.player.amountOfKills++;
+				LevelLogic.CheckIfAllKilled();
+				enemies.Remove(enemy);
+				break;
+			}
+		}
 	}
 
 	public static void CleanObjects(){
 		Program.player.CleanUp();
+		Enemy.CleanUp();
 		IMG_Quit();
 	}
 }
@@ -87,9 +101,7 @@ class Player : IObjects{
 	}
 
 	public void FireProjectile(){
-		ObjectLogic.projectiles.Add(new Projectile(true));
-		amountOfKills++;
-		LevelLogic.CheckIfAllKilled();
+		ObjectLogic.projectiles.Add(new Projectile(true, new Vector2(0, 0)));
 	}
 }
 
@@ -98,38 +110,49 @@ class Projectile{
 	public bool exists;
 	bool firedFromplayer;
 	
-	SDL_Rect rect;
+	public SDL_Rect rect;
 
 	Vector2 spawnPosition;
+
+	System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
 	
 	//Parameter is to know in which direction to go and what position to spawn at
-	public Projectile(bool isActivatedbyPlayer){
+	public Projectile(bool isActivatedbyPlayer, Vector2 enemyPosition){
 		exists = true;
 		firedFromplayer = isActivatedbyPlayer; 
+		stopwatch.Start();
 		if (firedFromplayer){
-			spawnPosition = new Vector2(Program.player.position + 23, Program.player.rect.y);
+			spawnPosition = new Vector2(Program.player.position + 23, Program.player.rect.y - 50);
 			Console.WriteLine("Projectile fired");
+		}else{
+			spawnPosition = new Vector2(enemyPosition.X + 20, enemyPosition.Y + 30);
 		}
 
 		rect = new SDL_Rect{
 			x = (int)spawnPosition.X,
-			y = (int)spawnPosition.Y - 50,
+			y = (int)spawnPosition.Y,
 			w = 5,
 			h = 50
 		};
 	}
 
 	void Move(){
-		if (firedFromplayer){
-			rect.y -= 1;
-		}else rect.y += 1;
+		if (stopwatch.Elapsed.TotalMilliseconds >= 5){
+			if (firedFromplayer){
+				rect.y -= 5;
+				stopwatch.Restart();
+			}else {
+				rect.y += 5;
+				stopwatch.Restart();
+			}
+		}
 	}
 
 	public void Loop(){
 		if (!exists) return;
 		Render();
 		Move();
-		if (rect.y < 0){
+		if (rect.y < 0 || rect.y > 640){
 			exists = false;
 		}
 	}
@@ -142,24 +165,77 @@ class Projectile{
 	}
 }
 
-class Enemy : IObjects{
+class Enemy{
+
+	static IntPtr surface;
+	static IntPtr texture;
+	SDL_Rect rect;
+
 
 	Vector2 position;
 
+	System.Timers.Timer fireProjectileTimer;
+	Random timeBetweenShots;
+
 	public Enemy(Vector2 inPos){
 		position = inPos;
+		timeBetweenShots = new Random();
+		fireProjectileTimer = new System.Timers.Timer(timeBetweenShots.Next(5, 10) * 1000);
+		fireProjectileTimer.Elapsed += FireProjectile;
+		fireProjectileTimer.Start();
 		Console.WriteLine($"Hello from {position}");
+		rect = new SDL_Rect{
+			x = (int)position.X,
+			y = (int)position.Y,
+			w = 50,
+			h = 25 
+		};
 	}
 
-	public void Setup(){
-		
+	void FireProjectile(Object? source, ElapsedEventArgs e){
+		ObjectLogic.projectiles.Add(new Projectile(false, position));
+	}
+
+	public static void Setup(){
+		surface = IMG_Load("Dependencies/Crab.png");
+		if (surface == IntPtr.Zero) Console.WriteLine($"There was a problem creating the enemy surface: {SDL_GetError()}");
+		texture = SDL_CreateTextureFromSurface(Window.renderer, surface);
+		if (texture == IntPtr.Zero) Console.WriteLine($"There was a problem creating the enemy texture: {SDL_GetError()}");
+		SDL_FreeSurface(surface);
+	}
+
+	public bool WasHit(){
+
+		int enemyXbegin = (int)position.X;
+		int enemyXend = enemyXbegin + rect.w;
+
+		int enemyYbegin = (int)position.Y;
+		int enemyYend = enemyYbegin + rect.h;
+
+		foreach(var projectile in ObjectLogic.projectiles){
+			int Xbegin = projectile.rect.x;
+			int Xend = Xbegin + projectile.rect.w;
+
+			int Ybegin = projectile.rect.y;
+
+			if (Xbegin >= enemyXbegin && Xend <= enemyXend && Ybegin <= enemyYend && Ybegin >= enemyYbegin ){
+				ObjectLogic.projectiles.Remove(projectile);
+				fireProjectileTimer.Stop();
+				fireProjectileTimer.Dispose();
+				return true;
+			}
+
+		}
+
+		return false;
 	}
 
 	public void Render(){
-
+		if (texture == IntPtr.Zero) Console.WriteLine($"There was a problem maintaining the texture: {SDL_GetError()}");
+		SDL_RenderCopy(Window.renderer, texture, IntPtr.Zero, ref rect);
 	}
 
-	public void CleanUp(){
-
+	public static void CleanUp(){
+		SDL_DestroyTexture(texture);
 	}
 }
