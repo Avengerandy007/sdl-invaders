@@ -7,6 +7,7 @@ class Program{
 	public static void Main(){
 		Window.Setup();
 		player.Setup();
+		LevelLogic.levels[LevelLogic.currentLevel].Start();
 		Window.MainLoop();
 	}
 }

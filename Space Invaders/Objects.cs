@@ -15,6 +15,8 @@ static class ObjectLogic{
 		Program.player.Render();
 		foreach(var projectile in projectiles){
 			projectile.Loop();
+
+			//Remove the projectile when not in view anymore
 			if (!projectile.exists){
 				projectiles.Remove(projectile);
 				break;
@@ -34,7 +36,7 @@ class Player : IObjects{
 	#region Display
 	IntPtr surface;
 	IntPtr texture;
-	SDL_Rect rect;
+	public SDL_Rect rect;
 
 	public int position; //Describes the players position along the X axis
 	
@@ -54,9 +56,9 @@ class Player : IObjects{
 		//Set the players size and coordinates
 		rect = new SDL_Rect{
 			x = ((winW - 100) / 2),
-			y = 530,
-			w = 100,
-			h = 50
+			y = winH - 100,
+			w = 50,
+			h = 25 
 		};
 
 		position = rect.x;
@@ -71,6 +73,8 @@ class Player : IObjects{
 	} 
 	#endregion
 
+	public int amountOfKills;
+
 
 	//If is called with true then move left otherwise right
 	public void Move(bool left){
@@ -84,6 +88,8 @@ class Player : IObjects{
 
 	public void FireProjectile(){
 		ObjectLogic.projectiles.Add(new Projectile(true));
+		amountOfKills++;
+		LevelLogic.CheckIfAllKilled();
 	}
 }
 
@@ -101,7 +107,7 @@ class Projectile{
 		exists = true;
 		firedFromplayer = isActivatedbyPlayer; 
 		if (firedFromplayer){
-			spawnPosition = new Vector2(Program.player.position + 48, 530);
+			spawnPosition = new Vector2(Program.player.position + 23, Program.player.rect.y);
 			Console.WriteLine("Projectile fired");
 		}
 
@@ -138,8 +144,15 @@ class Projectile{
 
 class Enemy : IObjects{
 
-	public void Setup(){
+	Vector2 position;
 
+	public Enemy(Vector2 inPos){
+		position = inPos;
+		Console.WriteLine($"Hello from {position}");
+	}
+
+	public void Setup(){
+		
 	}
 
 	public void Render(){
