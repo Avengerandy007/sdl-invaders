@@ -24,6 +24,18 @@ static class ObjectLogic{
 				projectiles.Remove(projectile);
 				break;
 			}
+
+			if (projectile.HitPlayer()){
+				foreach (var enemy in enemies) enemy.StopFiring(projectile);
+				LevelLogic.currentLevel = 0;
+				Program.player.amountOfKills = 0;
+				projectiles.Clear();
+				enemies.Clear();
+				LevelLogic.Cycle();
+				Program.player.position = Program.player.spawnPosition;
+				Program.player.rect.x = Program.player.position;
+				break;
+			}
 		}
 
 		foreach(var enemy in enemies){
@@ -53,6 +65,7 @@ class Player : IObjects{
 	public SDL_Rect rect;
 
 	public int position; //Describes the players position along the X axis
+	public int spawnPosition;
 	
 	//Loads all the SDL necities to display the player sprite
 	public void Setup(){
@@ -66,10 +79,12 @@ class Player : IObjects{
 		int winW;
 		int winH;
 		SDL_GetWindowSize(Window.window, out winW, out winH);
+
+		spawnPosition = ((winW - 100) / 2);
 		
 		//Set the players size and coordinates
 		rect = new SDL_Rect{
-			x = ((winW - 100) / 2),
+			x = spawnPosition,
 			y = winH - 100,
 			w = 50,
 			h = 25 
@@ -148,6 +163,27 @@ class Projectile{
 		}
 	}
 
+	public bool HitPlayer(){
+		int Xbegin = (int)spawnPosition.X;
+		int Xend = Xbegin + rect.w;
+
+		int Ybegin = rect.y;
+		int Yend = Ybegin + rect.h;
+
+		int pXbegin = Program.player.rect.x;
+		int pXend = pXbegin + Program.player.rect.w;
+
+		int pYbegin = Program.player.rect.y;
+
+		if (firedFromplayer){
+			return false;
+		}else{
+			if (Xbegin >= pXbegin && Xend <= pXend && Yend >= pYbegin) return true;
+		}
+
+		return false;
+	}
+
 	public void Loop(){
 		if (!exists) return;
 		Render();
@@ -180,7 +216,7 @@ class Enemy{
 	public Enemy(Vector2 inPos){
 		position = inPos;
 		timeBetweenShots = new Random();
-		fireProjectileTimer = new System.Timers.Timer(timeBetweenShots.Next(5, 10) * 1000);
+		fireProjectileTimer = new System.Timers.Timer(timeBetweenShots.Next(2, 5) * 1000);
 		fireProjectileTimer.Elapsed += FireProjectile;
 		fireProjectileTimer.Start();
 		Console.WriteLine($"Hello from {position}");
@@ -219,15 +255,21 @@ class Enemy{
 			int Ybegin = projectile.rect.y;
 
 			if (Xbegin >= enemyXbegin && Xend <= enemyXend && Ybegin <= enemyYend && Ybegin >= enemyYbegin ){
-				ObjectLogic.projectiles.Remove(projectile);
-				fireProjectileTimer.Stop();
-				fireProjectileTimer.Dispose();
+				StopFiring(projectile);
 				return true;
 			}
 
 		}
 
 		return false;
+	}
+
+	public void StopFiring(Projectile projectile){
+		ObjectLogic.projectiles.Remove(projectile);
+		fireProjectileTimer.Elapsed -= FireProjectile;
+		fireProjectileTimer.Stop();
+		fireProjectileTimer.Dispose();
+
 	}
 
 	public void Render(){
