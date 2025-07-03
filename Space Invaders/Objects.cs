@@ -7,6 +7,7 @@ using System.Timers;
 static class ObjectLogic{
 	
 	public static List<Projectile> projectiles = new List<Projectile>();
+	public static List<Projectile> queuedProjectiles = new List<Projectile>();
 	public static List<Enemy> enemies = new List<Enemy>();
 
 	public static void Setup(){
@@ -14,28 +15,42 @@ static class ObjectLogic{
 		Enemy.Setup();
 	}
 
+	static bool playerDied = false;
+
 	public static void RenderObjects(){
 		Program.player.Render();
-		foreach(var projectile in projectiles){
+
+		//Remove the projectile not needed anymore
+		projectiles.RemoveAll(projectile => !projectile.exists);
+		enemies.RemoveAll(enemy => !enemy.exists);
+
+		foreach(var projectile in queuedProjectiles) projectiles.Add(projectile);
+		queuedProjectiles.Clear();
+
+		if (!playerDied) foreach(var projectile in projectiles){
+
 			projectile.Loop();
 
-			//Remove the projectile when not in view anymore
-			if (!projectile.exists){
-				projectiles.Remove(projectile);
-				break;
+			if (projectile.HitPlayer()){
+				if (Program.player.lives == 0){
+					playerDied = true;
+					PlayerDied();
+					Program.player.lives = 3;
+					break;
+				}else{
+					Program.player.lives--;
+					ClearProjectiles();
+					Program.player.position = Program.player.spawnPosition;
+					Program.player.rect.x = Program.player.position;
+					break;
+				}
 			}
 
-			if (projectile.HitPlayer()){
-				foreach (var enemy in enemies) enemy.StopFiring(projectile);
-				LevelLogic.currentLevel = 0;
-				Program.player.amountOfKills = 0;
-				projectiles.Clear();
-				enemies.Clear();
-				LevelLogic.Cycle();
-				Program.player.position = Program.player.spawnPosition;
-				Program.player.rect.x = Program.player.position;
-				break;
-			}
+		}else{
+			ClearProjectiles();
+			LevelLogic.Cycle();
+			queuedProjectiles.Clear();
+			playerDied = false;
 		}
 
 		foreach(var enemy in enemies){
@@ -43,10 +58,26 @@ static class ObjectLogic{
 			if (enemy.WasHit()){
 				Program.player.amountOfKills++;
 				LevelLogic.CheckIfAllKilled();
-				enemies.Remove(enemy);
+				enemy.exists = false;
 				break;
 			}
 		}
+
+	}
+
+	static void ClearProjectiles(){
+		foreach(var projectile in projectiles) projectile.exists = false;
+	}
+
+	static void PlayerDied(){
+		foreach (var enemy in enemies) enemy.StopFiring();
+		foreach (var projectile in projectiles) projectile.exists = false;
+		LevelLogic.currentLevel = 0;
+		Program.player.amountOfKills = 0;
+		enemies.Clear();
+		Program.player.position = Program.player.spawnPosition;
+		Program.player.rect.x = Program.player.position;
+
 	}
 
 	public static void CleanObjects(){
@@ -66,6 +97,7 @@ class Player : IObjects{
 
 	public int position; //Describes the players position along the X axis
 	public int spawnPosition;
+	public int lives = 3;
 	
 	//Loads all the SDL necities to display the player sprite
 	public void Setup(){
@@ -123,7 +155,7 @@ class Player : IObjects{
 class Projectile{
 
 	public bool exists;
-	bool firedFromplayer;
+	public bool firedFromplayer;
 	
 	public SDL_Rect rect;
 
@@ -138,7 +170,6 @@ class Projectile{
 		stopwatch.Start();
 		if (firedFromplayer){
 			spawnPosition = new Vector2(Program.player.position + 23, Program.player.rect.y - 50);
-			Console.WriteLine("Projectile fired");
 		}else{
 			spawnPosition = new Vector2(enemyPosition.X + 20, enemyPosition.Y + 30);
 		}
@@ -209,17 +240,18 @@ class Enemy{
 
 
 	Vector2 position;
+	public bool exists;
 
 	System.Timers.Timer fireProjectileTimer;
 	Random timeBetweenShots;
 
 	public Enemy(Vector2 inPos){
+		exists = true;
 		position = inPos;
 		timeBetweenShots = new Random();
 		fireProjectileTimer = new System.Timers.Timer(timeBetweenShots.Next(2, 5) * 1000);
 		fireProjectileTimer.Elapsed += FireProjectile;
 		fireProjectileTimer.Start();
-		Console.WriteLine($"Hello from {position}");
 		rect = new SDL_Rect{
 			x = (int)position.X,
 			y = (int)position.Y,
@@ -229,7 +261,7 @@ class Enemy{
 	}
 
 	void FireProjectile(Object? source, ElapsedEventArgs e){
-		ObjectLogic.projectiles.Add(new Projectile(false, position));
+		ObjectLogic.queuedProjectiles.Add(new Projectile(false, position));
 	}
 
 	public static void Setup(){
@@ -241,6 +273,8 @@ class Enemy{
 	}
 
 	public bool WasHit(){
+		
+		bool wasKilled = false;
 
 		int enemyXbegin = (int)position.X;
 		int enemyXend = enemyXbegin + rect.w;
@@ -249,13 +283,17 @@ class Enemy{
 		int enemyYend = enemyYbegin + rect.h;
 
 		foreach(var projectile in ObjectLogic.projectiles){
+			if (wasKilled) break;
 			int Xbegin = projectile.rect.x;
 			int Xend = Xbegin + projectile.rect.w;
 
 			int Ybegin = projectile.rect.y;
-
+			
+			if (!projectile.firedFromplayer) break;
 			if (Xbegin >= enemyXbegin && Xend <= enemyXend && Ybegin <= enemyYend && Ybegin >= enemyYbegin ){
-				StopFiring(projectile);
+				StopFiring();
+				KillProjectile(projectile);
+				wasKilled = true;
 				return true;
 			}
 
@@ -264,8 +302,11 @@ class Enemy{
 		return false;
 	}
 
-	public void StopFiring(Projectile projectile){
-		ObjectLogic.projectiles.Remove(projectile);
+	void KillProjectile(Projectile projectile){
+		projectile.exists = false;
+	}
+
+	public void StopFiring(){
 		fireProjectileTimer.Elapsed -= FireProjectile;
 		fireProjectileTimer.Stop();
 		fireProjectileTimer.Dispose();

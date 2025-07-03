@@ -9,11 +9,28 @@ class LevelLogic{
 		
 		new Level{
 			index = 0,
-			amountOfenemies = 3,
+			amountOfenemies = 20,
 			enemyPositions = [
 				new Vector2(100, 100),
 				new Vector2(170, 100),
-				new Vector2(240, 100)
+				new Vector2(240, 100),
+				new Vector2(310, 100),
+				new Vector2(380, 100),
+				new Vector2(450, 100),
+				new Vector2(520, 100),
+				new Vector2(590, 100),
+				new Vector2(660, 100),
+				new Vector2(730, 100),
+				new Vector2(100, 200),
+				new Vector2(170, 200),
+				new Vector2(240, 200),
+				new Vector2(310, 200),
+				new Vector2(380, 200),
+				new Vector2(450, 200),
+				new Vector2(520, 200),
+				new Vector2(590, 200),
+				new Vector2(660, 200),
+				new Vector2(730, 200)
 			]
 		},
 
