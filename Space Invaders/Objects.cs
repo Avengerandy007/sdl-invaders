@@ -1,5 +1,6 @@
 using static SDL2.SDL;
 using static SDL2.SDL_image;
+using static SDL2.SDL_ttf;
 using System.Numerics;
 using System.Timers;
 
@@ -9,9 +10,11 @@ static class ObjectLogic{
 	public static List<Projectile> projectiles = new List<Projectile>();
 	public static List<Projectile> queuedProjectiles = new List<Projectile>();
 	public static List<Enemy> enemies = new List<Enemy>();
+	public static List<UI> UIelements = new List<UI>();
 
 	public static void Setup(){
 		IMG_Init(IMG_InitFlags.IMG_INIT_PNG);
+		TTF_Init();
 		Enemy.Setup();
 	}
 
@@ -19,6 +22,8 @@ static class ObjectLogic{
 
 	public static void RenderObjects(){
 		Program.player.Render();
+
+		Program.lives.variableToDisplay = Program.player.lives;
 
 		//Remove the projectile not needed anymore
 		projectiles.RemoveAll(projectile => !projectile.exists);
@@ -63,6 +68,8 @@ static class ObjectLogic{
 			}
 		}
 
+		foreach (var element in UIelements) element.Render();
+
 	}
 
 	static void ClearProjectiles(){
@@ -83,7 +90,9 @@ static class ObjectLogic{
 	public static void CleanObjects(){
 		Program.player.CleanUp();
 		Enemy.CleanUp();
+		foreach (var element in UIelements) element.CleanUp();
 		IMG_Quit();
+		TTF_Quit();
 	}
 }
 
@@ -319,6 +328,51 @@ class Enemy{
 	}
 
 	public static void CleanUp(){
+		SDL_DestroyTexture(texture);
+	}
+}
+
+class UI : IObjects {
+
+	IntPtr font;
+	IntPtr surface;
+	IntPtr texture;
+	SDL_Rect rect;
+	SDL_Color white;
+
+	public int variableToDisplay;
+	string? textToDisplay;
+	Vector2 position;
+
+	public UI(ref int variable, string text, Vector2 location){
+		ObjectLogic.UIelements.Add(this);
+		variableToDisplay = variable;
+		textToDisplay = text;
+		position = location;
+		Setup();
+	}
+	
+	public void Setup(){
+		font = TTF_OpenFont("Dependencies/BitcountGridDouble-Regular.ttf", 40);
+		rect = new SDL_Rect{
+			x = (int)position.X,
+			y = (int)position.Y,
+			w = 100,
+			h = 50
+		};
+		white = new SDL_Color{r = 255, g = 255, b = 255, a = 255};
+	}
+
+	public void Render(){
+		SDL_DestroyTexture(texture);
+		string display = textToDisplay + variableToDisplay;
+		surface = TTF_RenderText_Solid(font, display, white);
+		texture = SDL_CreateTextureFromSurface(Window.renderer, surface);
+		SDL_FreeSurface(surface);
+		SDL_RenderCopy(Window.renderer, texture, IntPtr.Zero, ref rect);
+	}
+
+	public void CleanUp(){
 		SDL_DestroyTexture(texture);
 	}
 }
