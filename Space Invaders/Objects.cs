@@ -21,16 +21,14 @@ static class ObjectLogic{
 	static bool playerDied = false;
 
 	public static void RenderObjects(){
-		Program.player.Render();
-
-		Program.lives.variableToDisplay = Program.player.lives;
 
 		//Remove the projectile not needed anymore
 		projectiles.RemoveAll(projectile => !projectile.exists);
 		enemies.RemoveAll(enemy => !enemy.exists);
 
-		foreach(var projectile in queuedProjectiles) projectiles.Add(projectile);
-		queuedProjectiles.Clear();
+		Program.player.Render();
+
+		Program.lives.variableToDisplay = Program.player.lives;
 
 		if (!playerDied) foreach(var projectile in projectiles){
 
@@ -67,6 +65,10 @@ static class ObjectLogic{
 				break;
 			}
 		}
+
+		projectiles.AddRange(queuedProjectiles);
+		queuedProjectiles.Clear();
+
 
 		foreach (var element in UIelements) element.Render();
 
