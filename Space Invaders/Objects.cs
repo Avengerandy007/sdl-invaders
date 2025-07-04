@@ -1,3 +1,11 @@
+/*
+
+	A few words on how collision detection works, because it is kinda retarded and doesn't make that much sense:
+
+	In every case where I need collision detection I take the objects I am checking from position, find out it's "other sides coordinates" by adding its width and height. I do the same for the object I try to collide with and find out if that objects coordinates are in between this ones.
+
+*/
+
 using static SDL2.SDL;
 using static SDL2.SDL_image;
 using static SDL2.SDL_ttf;
@@ -12,20 +20,19 @@ static class ObjectLogic{
 	public static List<Enemy> enemies = new List<Enemy>();
 	public static List<UI> UIelements = new List<UI>();
 
+	//Setup all needed sdl services and enemy logic
 	public static void Setup(){
 		IMG_Init(IMG_InitFlags.IMG_INIT_PNG);
 		TTF_Init();
 		Enemy.Setup();
+		Enemy.MoveTimerStart();
 	}
 
 	static bool playerDied = false;
 
 	public static void RenderObjects(){
 
-		//Remove the projectile not needed anymore
-		projectiles.RemoveAll(projectile => !projectile.exists);
-		enemies.RemoveAll(enemy => !enemy.exists);
-
+		
 		Program.player.Render();
 
 		Program.lives.variableToDisplay = Program.player.lives;
@@ -69,6 +76,9 @@ static class ObjectLogic{
 		projectiles.AddRange(queuedProjectiles);
 		queuedProjectiles.Clear();
 
+		//Remove the projectile not needed anymore
+		projectiles.RemoveAll(projectile => !projectile.exists);
+		enemies.RemoveAll(enemy => !enemy.exists);
 
 		foreach (var element in UIelements) element.Render();
 
@@ -90,6 +100,7 @@ static class ObjectLogic{
 	}
 
 	public static void CleanObjects(){
+		Enemy.DestroyTimer();
 		Program.player.CleanUp();
 		Enemy.CleanUp();
 		foreach (var element in UIelements) element.CleanUp();
@@ -193,6 +204,7 @@ class Projectile{
 		};
 	}
 
+	//Change the position every frame after 5 miliseconds depending if was shot from player
 	void Move(){
 		if (stopwatch.Elapsed.TotalMilliseconds >= 5){
 			if (firedFromplayer){
@@ -205,6 +217,7 @@ class Projectile{
 		}
 	}
 
+	//Check if hit the player in order to activate his death logic
 	public bool HitPlayer(){
 		int Xbegin = (int)spawnPosition.X;
 		int Xend = Xbegin + rect.w;
@@ -226,10 +239,13 @@ class Projectile{
 		return false;
 	}
 
+	//Render and move each frame
 	public void Loop(){
 		if (!exists) return;
 		Render();
 		Move();
+		
+		//If is out of the screen bounds then destroy this
 		if (rect.y < 0 || rect.y > 640){
 			exists = false;
 		}
@@ -254,15 +270,43 @@ class Enemy{
 	public bool exists;
 
 	System.Timers.Timer fireProjectileTimer;
-	Random timeBetweenShots;
+	Random timeBetweenShots; //A random factor for each enemies time in between shots
+
+	static System.Timers.Timer moveTimer = new System.Timers.Timer(5000); //When reaches 0, move the enemies
+
+	//Initialise the timers logic
+	public static void MoveTimerStart(){
+		moveTimer.Elapsed += Move;
+		moveTimer.Start();
+	}
+
+	//Move every enemy 70 pixel to the right, when further than 730, move 100 pixels up(down)
+	static void Move(Object? source, ElapsedEventArgs e){
+		foreach(var enemy in ObjectLogic.enemies){
+			enemy.position.X += 70;
+			if (enemy.position.X >= 730){
+				enemy.position.Y += 100;
+				enemy.position.X = 100;
+			}
+		}
+	}
+
+	public static void DestroyTimer(){
+		moveTimer.Elapsed -= Move;
+		moveTimer.Stop();
+		moveTimer.Dispose();
+	}
 
 	public Enemy(Vector2 inPos){
 		exists = true;
 		position = inPos;
+
+
 		timeBetweenShots = new Random();
-		fireProjectileTimer = new System.Timers.Timer(timeBetweenShots.Next(2, 5) * 1000);
+		fireProjectileTimer = new System.Timers.Timer(timeBetweenShots.Next(5, 20) * 1000);
 		fireProjectileTimer.Elapsed += FireProjectile;
 		fireProjectileTimer.Start();
+
 		rect = new SDL_Rect{
 			x = (int)position.X,
 			y = (int)position.Y,
@@ -271,10 +315,12 @@ class Enemy{
 		};
 	}
 
+	//Fire projectile when timer reaches 0
 	void FireProjectile(Object? source, ElapsedEventArgs e){
-		ObjectLogic.queuedProjectiles.Add(new Projectile(false, position));
+		ObjectLogic.queuedProjectiles.Add(new Projectile(false, position)); 
 	}
 
+	//Load all necesary assets for displaying to screen
 	public static void Setup(){
 		surface = IMG_Load("Dependencies/Crab.png");
 		if (surface == IntPtr.Zero) Console.WriteLine($"There was a problem creating the enemy surface: {SDL_GetError()}");
@@ -283,6 +329,7 @@ class Enemy{
 		SDL_FreeSurface(surface);
 	}
 
+	//Check if was hit by player projectile
 	public bool WasHit(){
 		
 		bool wasKilled = false;
@@ -301,6 +348,7 @@ class Enemy{
 			int Ybegin = projectile.rect.y;
 			
 			if (!projectile.firedFromplayer) break;
+			//If the incoming projectile is in between the X and Y coordinates of the enemy
 			if (Xbegin >= enemyXbegin && Xend <= enemyXend && Ybegin <= enemyYend && Ybegin >= enemyYbegin ){
 				StopFiring();
 				KillProjectile(projectile);
@@ -313,10 +361,12 @@ class Enemy{
 		return false;
 	}
 
+	//Destroy the projectile that killed this
 	void KillProjectile(Projectile projectile){
 		projectile.exists = false;
 	}
 
+	//Dispose of the firing timers logic
 	public void StopFiring(){
 		fireProjectileTimer.Elapsed -= FireProjectile;
 		fireProjectileTimer.Stop();
@@ -324,7 +374,10 @@ class Enemy{
 
 	}
 
+	//Render the enemy to the screen each frame and change its position acordingly
 	public void Render(){
+		rect.x = (int)position.X;
+		rect.y = (int)position.Y;
 		if (texture == IntPtr.Zero) Console.WriteLine($"There was a problem maintaining the texture: {SDL_GetError()}");
 		SDL_RenderCopy(Window.renderer, texture, IntPtr.Zero, ref rect);
 	}
@@ -342,13 +395,12 @@ class UI : IObjects {
 	SDL_Rect rect;
 	SDL_Color white;
 
-	public int variableToDisplay;
+	public int variableToDisplay; //Updated from while loop manually for all UI components
 	string? textToDisplay;
 	Vector2 position;
 
-	public UI(ref int variable, string text, Vector2 location){
+	public UI(string text, Vector2 location){
 		ObjectLogic.UIelements.Add(this);
-		variableToDisplay = variable;
 		textToDisplay = text;
 		position = location;
 		Setup();
