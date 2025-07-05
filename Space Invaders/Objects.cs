@@ -35,7 +35,10 @@ static class ObjectLogic{
 		
 		Program.player.Render();
 
+		#region UI Elements
 		Program.lives.variableToDisplay = Program.player.lives;
+		Program.level.variableToDisplay = LevelLogic.currentLevel;
+		#endregion
 
 		if (!playerDied) foreach(var projectile in projectiles){
 
@@ -67,8 +70,8 @@ static class ObjectLogic{
 			enemy.Render();
 			if (enemy.WasHit()){
 				Program.player.amountOfKills++;
-				LevelLogic.CheckIfAllKilled();
 				enemy.exists = false;
+				LevelLogic.CheckIfAllKilled();
 				break;
 			}
 		}
@@ -157,7 +160,6 @@ class Player : IObjects{
 	#endregion
 
 	public int amountOfKills;
-
 
 	//If is called with true then move left otherwise right
 	public void Move(bool left){
@@ -272,7 +274,7 @@ class Enemy{
 	System.Timers.Timer fireProjectileTimer;
 	Random timeBetweenShots; //A random factor for each enemies time in between shots
 
-	static System.Timers.Timer moveTimer = new System.Timers.Timer(5000); //When reaches 0, move the enemies
+	static System.Timers.Timer moveTimer = new System.Timers.Timer(1000); //When reaches 0, move the enemies
 
 	//Initialise the timers logic
 	public static void MoveTimerStart(){
@@ -289,7 +291,19 @@ class Enemy{
 				enemy.position.X = 100;
 			}
 		}
+
+		//Check if this is below a certain treshold and then reset completely the player
+		if (ObjectLogic.enemies.Last().position.Y >= 450){
+			Program.player.position = Program.player.spawnPosition;
+			Program.player.rect.x = Program.player.position;
+			LevelLogic.currentLevel = 0;
+			foreach(var enemy in ObjectLogic.enemies) enemy.exists = false;
+			foreach (var projectiles in ObjectLogic.projectiles) projectiles.exists = false;
+			ObjectLogic.queuedProjectiles.Clear();
+			LevelLogic.Cycle();
+		} 
 	}
+
 
 	public static void DestroyTimer(){
 		moveTimer.Elapsed -= Move;
