@@ -3,7 +3,7 @@ This "project" if you would like to call it that is supposed to give me a learni
 
 ![image](https://github.com/user-attachments/assets/577e56a4-24a3-4701-8cee-7502569fbc2a)
 
-As you can see from the image, it doesn't feature all that much, however, I am willing to continue working on it but for now this is it.
+As you can see from the image, it doesn't feature all that much. I am willing to continue working on it but for now this is it.
 
 ## How to play
 You can move using the 'left' and 'right' arrow keys and fire a projectile by pressing 'space'.
