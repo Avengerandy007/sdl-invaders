@@ -115,8 +115,6 @@ class Level{
 
 	//Load all the enemies at the specified coordonates
 	public void Start(){
-		foreach(Vector2 position in enemyPositions){
-			ObjectLogic.enemies.Add(new Enemy(position));
-		}
+		ObjectLogic.AddEnemies(enemyPositions);
 	}
 }

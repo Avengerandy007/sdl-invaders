@@ -46,6 +46,7 @@ public static class Window{
 		SDL_RenderClear(renderer);
 		ObjectLogic.RenderObjects();
 		SDL_RenderPresent(renderer);
+		SDL_Delay(6);
 	}
 
 	//Listen for events

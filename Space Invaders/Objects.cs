@@ -17,8 +17,8 @@ static class ObjectLogic{
 	
 	public static List<Projectile> projectiles = new List<Projectile>();
 	public static List<Projectile> queuedProjectiles = new List<Projectile>();
-	public static List<Enemy> enemies = new List<Enemy>();
-	public static List<UI> UIelements = new List<UI>();
+	public static Enemy[] enemies = new Enemy[20];
+	public static UI[] UIelements = {Program.level, Program.lives, Program.score};
 
 	//Setup all needed sdl services and enemy logic
 	public static void Setup(){
@@ -69,6 +69,7 @@ static class ObjectLogic{
 		}
 
 		foreach(var enemy in enemies){
+			if (enemy is null) continue;
 			enemy.Render();
 			if (enemy.WasHit()){
 				Program.player.amountOfKills++;
@@ -84,10 +85,21 @@ static class ObjectLogic{
 
 		//Remove the projectile not needed anymore
 		projectiles.RemoveAll(projectile => !projectile.exists);
-		enemies.RemoveAll(enemy => !enemy.exists);
+		ClearEnemies();
 
 		foreach (var element in UIelements) element.Render();
 
+	}
+
+	public static void AddEnemies(Vector2[] enemyPositions){
+		enemies = new Enemy[enemyPositions.Count()];
+		for (int i = 0; i < enemies.Count(); i++){
+			enemies[i] = new Enemy(enemyPositions[i]);
+		}
+	}
+
+	static void ClearEnemies(){
+		enemies = Array.FindAll(enemies, (enemy => enemy.exists)).ToArray();
 	}
 
 	static void ClearProjectiles(){
@@ -96,10 +108,11 @@ static class ObjectLogic{
 
 	static void PlayerDied(){
 		foreach (var enemy in enemies) enemy.StopFiring();
+		queuedProjectiles.Clear();
 		foreach (var projectile in projectiles) projectile.exists = false;
 		LevelLogic.currentLevel = 0;
 		Program.player.amountOfKills = 0;
-		enemies.Clear();
+		foreach(var enemy in enemies) enemy.exists = false;
 		Program.player.position = Program.player.spawnPosition;
 		Program.player.rect.x = Program.player.position;
 
@@ -176,7 +189,7 @@ class Player : IObjects{
 	}
 
 	public void FireProjectile(){
-		ObjectLogic.projectiles.Add(new Projectile(true, new Vector2(0, 0)));
+		ObjectLogic.projectiles.Add(new Projectile(true, new Vector2(0, 0))); 
 	}
 }
 
@@ -189,13 +202,13 @@ class Projectile{
 
 	Vector2 spawnPosition;
 
-	System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
+	//System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
 	
 	//Parameter is to know in which direction to go and what position to spawn at
 	public Projectile(bool isActivatedbyPlayer, Vector2 enemyPosition){
 		exists = true;
 		firedFromplayer = isActivatedbyPlayer; 
-		stopwatch.Start();
+		//stopwatch.Start();
 		if (firedFromplayer){
 			spawnPosition = new Vector2(Program.player.position + 23, Program.player.rect.y - 50);
 		}else{
@@ -212,15 +225,15 @@ class Projectile{
 
 	//Change the position every frame after 5 miliseconds depending if was shot from player
 	void Move(){
-		if (stopwatch.Elapsed.TotalMilliseconds >= 5){
+		//if (stopwatch.Elapsed.TotalMilliseconds >= 5){
 			if (firedFromplayer){
 				rect.y -= 5;
-				stopwatch.Restart();
+				//stopwatch.Restart();
 			}else {
 				rect.y += 5;
-				stopwatch.Restart();
+				//stopwatch.Restart();
 			}
-		}
+		//}
 	}
 
 	//Check if hit the player in order to activate his death logic
@@ -272,13 +285,13 @@ class Enemy{
 	SDL_Rect rect;
 
 
-	Vector2 position;
+	public Vector2 position;
 	public bool exists;
 
 	System.Timers.Timer fireProjectileTimer;
 	Random timeBetweenShots; //A random factor for each enemies time in between shots
 
-	static System.Timers.Timer moveTimer = new System.Timers.Timer(3000); //When reaches 0, move the enemies
+	static System.Timers.Timer moveTimer = new System.Timers.Timer(6000); //When reaches 0, move the enemies
 
 	//Initialise the timers logic
 	public static void MoveTimerStart(){
@@ -305,6 +318,7 @@ class Enemy{
 			foreach (var projectiles in ObjectLogic.projectiles) projectiles.exists = false;
 			ObjectLogic.queuedProjectiles.Clear();
 			LevelLogic.Cycle();
+			Program.player.lives = 3;
 		} 
 	}
 
@@ -335,6 +349,7 @@ class Enemy{
 
 	//Fire projectile when timer reaches 0
 	void FireProjectile(Object? source, ElapsedEventArgs e){
+		if (!exists) return;
 		ObjectLogic.queuedProjectiles.Add(new Projectile(false, position)); 
 	}
 
@@ -389,7 +404,6 @@ class Enemy{
 		fireProjectileTimer.Elapsed -= FireProjectile;
 		fireProjectileTimer.Stop();
 		fireProjectileTimer.Dispose();
-
 	}
 
 	//Render the enemy to the screen each frame and change its position acordingly
@@ -418,7 +432,6 @@ class UI : IObjects {
 	Vector2 position;
 
 	public UI(string text, Vector2 location){
-		ObjectLogic.UIelements.Add(this);
 		textToDisplay = text;
 		position = location;
 		Setup();
