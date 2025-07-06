@@ -107,7 +107,7 @@ class LevelLogic{
 class Level{
 	public int index;
 	public int amountOfenemies;
-	public Vector2[] enemyPositions; //An array containing the positions of all the enemies in the level
+	public Vector2[] enemyPositions; //An array containing the positions of all the enemies in the level, these increase by 70 on the X axis foreach one as to leave a little space in between them but not keep them too far appart, however if you want you can put as much space in between them as you wish
 
 	public Level(){
 		this.enemyPositions = new Vector2[amountOfenemies];

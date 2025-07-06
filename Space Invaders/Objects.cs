@@ -38,6 +38,7 @@ static class ObjectLogic{
 		#region UI Elements
 		Program.lives.variableToDisplay = Program.player.lives;
 		Program.level.variableToDisplay = LevelLogic.currentLevel;
+		Program.score.variableToDisplay = Program.player.score;
 		#endregion
 
 		if (!playerDied) foreach(var projectile in projectiles){
@@ -49,6 +50,7 @@ static class ObjectLogic{
 					playerDied = true;
 					PlayerDied();
 					Program.player.lives = 3;
+					Program.player.score = 0;
 					break;
 				}else{
 					Program.player.lives--;
@@ -72,6 +74,7 @@ static class ObjectLogic{
 				Program.player.amountOfKills++;
 				enemy.exists = false;
 				LevelLogic.CheckIfAllKilled();
+				Program.player.score++;
 				break;
 			}
 		}
@@ -123,6 +126,7 @@ class Player : IObjects{
 	public int position; //Describes the players position along the X axis
 	public int spawnPosition;
 	public int lives = 3;
+	public int score = 0;
 	
 	//Loads all the SDL necities to display the player sprite
 	public void Setup(){
