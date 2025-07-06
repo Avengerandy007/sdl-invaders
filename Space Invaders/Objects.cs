@@ -274,7 +274,7 @@ class Enemy{
 	System.Timers.Timer fireProjectileTimer;
 	Random timeBetweenShots; //A random factor for each enemies time in between shots
 
-	static System.Timers.Timer moveTimer = new System.Timers.Timer(1000); //When reaches 0, move the enemies
+	static System.Timers.Timer moveTimer = new System.Timers.Timer(3000); //When reaches 0, move the enemies
 
 	//Initialise the timers logic
 	public static void MoveTimerStart(){
