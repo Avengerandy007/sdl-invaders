@@ -24,7 +24,6 @@ static class ObjectLogic{
 	public static void Setup(){
 		IMG_Init(IMG_InitFlags.IMG_INIT_PNG);
 		TTF_Init();
-		Enemy.Setup();
 		Enemy.MoveTimerStart();
 	}
 
@@ -75,7 +74,7 @@ static class ObjectLogic{
 				Program.player.amountOfKills++;
 				enemy.exists = false;
 				LevelLogic.CheckIfAllKilled();
-				Program.player.score++;
+				Program.player.score += enemy.scoreFactor;
 				break;
 			}
 		}
@@ -94,8 +93,22 @@ static class ObjectLogic{
 	public static void AddEnemies(Vector2[] enemyPositions){
 		enemies = new Enemy[enemyPositions.Count()];
 		for (int i = 0; i < enemies.Count(); i++){
-			enemies[i] = new Enemy(enemyPositions[i]);
+			switch((int)enemyPositions[i].Y){
+				case 100:
+					enemies[i] = new Enemy(enemyPositions[i], 1);
+				break;
+
+				case 200:
+					enemies[i] = new Enemy(enemyPositions[i], 0);
+				break;
+
+				default:
+					Console.WriteLine($"Unhandled Y value: {enemyPositions[i].Y}");
+					enemies[i] = new Enemy(enemyPositions[i], 1);
+				break;
+			}
 		}
+
 	}
 
 	static void ClearEnemies(){
@@ -223,17 +236,13 @@ class Projectile{
 		};
 	}
 
-	//Change the position every frame after 5 miliseconds depending if was shot from player
+	//Change the position every frame depending if was shot from player
 	void Move(){
-		//if (stopwatch.Elapsed.TotalMilliseconds >= 5){
-			if (firedFromplayer){
-				rect.y -= 5;
-				//stopwatch.Restart();
-			}else {
-				rect.y += 5;
-				//stopwatch.Restart();
-			}
-		//}
+		if (firedFromplayer){
+			rect.y -= 5;
+		}else {
+			rect.y += 5;
+		}
 	}
 
 	//Check if hit the player in order to activate his death logic
@@ -280,13 +289,16 @@ class Projectile{
 
 class Enemy{
 
-	static IntPtr surface;
-	static IntPtr texture;
+	IntPtr surface;
+	IntPtr texture;
 	SDL_Rect rect;
 
 
 	public Vector2 position;
 	public bool exists;
+
+	public int type; //Describes the enemies type, 0 - crab, 1 - squid
+	public int scoreFactor; //The amount of score the player earns when this is killed
 
 	System.Timers.Timer fireProjectileTimer;
 	Random timeBetweenShots; //A random factor for each enemies time in between shots
@@ -329,9 +341,11 @@ class Enemy{
 		moveTimer.Dispose();
 	}
 
-	public Enemy(Vector2 inPos){
+	//Parameter name starts with in because I have another variable with the same name
+	public Enemy(Vector2 inPos, int inType){
 		exists = true;
 		position = inPos;
+		type = inType;
 
 
 		timeBetweenShots = new Random();
@@ -345,6 +359,8 @@ class Enemy{
 			w = 50,
 			h = 25 
 		};
+
+		Setup();
 	}
 
 	//Fire projectile when timer reaches 0
@@ -354,8 +370,18 @@ class Enemy{
 	}
 
 	//Load all necesary assets for displaying to screen
-	public static void Setup(){
-		surface = IMG_Load("Dependencies/Crab.png");
+	void Setup(){
+		switch(type){
+			case 1:
+				surface = IMG_Load("Dependencies/Crab.png");
+				scoreFactor = 3;
+			break;
+
+			case 0:
+				surface = IMG_Load("Dependencies/Squid.png");
+				scoreFactor = 1;
+			break;
+		}
 		if (surface == IntPtr.Zero) Console.WriteLine($"There was a problem creating the enemy surface: {SDL_GetError()}");
 		texture = SDL_CreateTextureFromSurface(Window.renderer, surface);
 		if (texture == IntPtr.Zero) Console.WriteLine($"There was a problem creating the enemy texture: {SDL_GetError()}");
@@ -415,7 +441,7 @@ class Enemy{
 	}
 
 	public static void CleanUp(){
-		SDL_DestroyTexture(texture);
+		foreach (var enemy in ObjectLogic.enemies) SDL_DestroyTexture(enemy.texture);
 	}
 }
 
