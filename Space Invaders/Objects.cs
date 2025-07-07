@@ -304,6 +304,13 @@ class Enemy{
 	Random timeBetweenShots; //A random factor for each enemies time in between shots
 
 	static System.Timers.Timer moveTimer = new System.Timers.Timer(6000); //When reaches 0, move the enemies
+	
+	int enemyXbegin;
+	int enemyXend;
+
+	int enemyYbegin;
+	int enemyYend;
+
 
 	//Initialise the timers logic
 	public static void MoveTimerStart(){
@@ -347,6 +354,7 @@ class Enemy{
 		position = inPos;
 		type = inType;
 
+		UpdateDataCoordinates();
 
 		timeBetweenShots = new Random();
 		fireProjectileTimer = new System.Timers.Timer(timeBetweenShots.Next(5, 20) * 1000);
@@ -361,6 +369,16 @@ class Enemy{
 		};
 
 		Setup();
+	}
+
+	public void UpdateDataCoordinates(){
+		
+		enemyXbegin = (int)position.X;
+		enemyXend = enemyXbegin + rect.w;
+
+		enemyYbegin = (int)position.Y;
+		enemyYend = enemyYbegin + rect.h;
+
 	}
 
 	//Fire projectile when timer reaches 0
@@ -388,27 +406,29 @@ class Enemy{
 		SDL_FreeSurface(surface);
 	}
 
+	
 	//Check if was hit by player projectile
 	public bool WasHit(){
-		
 		bool wasKilled = false;
-
-		int enemyXbegin = (int)position.X;
-		int enemyXend = enemyXbegin + rect.w;
-
-		int enemyYbegin = (int)position.Y;
-		int enemyYend = enemyYbegin + rect.h;
-
+		
+		UpdateDataCoordinates();
 		foreach(var projectile in ObjectLogic.projectiles){
-			if (wasKilled) break;
+			if (wasKilled || !projectile.firedFromplayer) break;
+
 			int Xbegin = projectile.rect.x;
 			int Xend = Xbegin + projectile.rect.w;
 
 			int Ybegin = projectile.rect.y;
+			int Yend = Ybegin + projectile.rect.h;
+
+			int disX = Xend - enemyXbegin;
+			int disY = Yend - enemyYbegin;
+			double distance = Math.Sqrt(Math.Pow(disX, 2) + Math.Pow(disY, 2));
+
+			if (distance > 80) continue;
 			
-			if (!projectile.firedFromplayer) break;
 			//If the incoming projectile is in between the X and Y coordinates of the enemy
-			if (Xbegin >= enemyXbegin && Xend <= enemyXend && Ybegin <= enemyYend && Ybegin >= enemyYbegin ){
+			if (Xbegin >= enemyXbegin && Xend <= enemyXend && Ybegin <= enemyYend && Ybegin >= enemyYbegin){
 				StopFiring();
 				KillProjectile(projectile);
 				wasKilled = true;
