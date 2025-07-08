@@ -75,9 +75,9 @@ static class ObjectLogic{
 			if (enemy.WasHit()){
 				Program.player.amountOfKills++;
 				enemy.exists = false;
+				ClearEnemies();
 				LevelLogic.CheckIfAllKilled();
 				Program.player.score += enemy.scoreFactor;
-				ClearEnemies();
 				break;
 			}
 		}
@@ -120,7 +120,7 @@ static class ObjectLogic{
 		enemies = Array.FindAll(enemies, (enemy => enemy.exists)).ToArray();
 	}
 
-	static void ClearProjectiles(){
+	public static void ClearProjectiles(){
 		foreach(var projectile in projectiles) projectile.exists = false;
 	}
 
@@ -220,13 +220,10 @@ class Projectile{
 
 	Vector2 spawnPosition;
 
-	//System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
-	
 	//Parameter is to know in which direction to go and what position to spawn at
 	public Projectile(bool isActivatedbyPlayer, Vector2 enemyPosition){
 		exists = true;
 		firedFromplayer = isActivatedbyPlayer; 
-		//stopwatch.Start();
 		if (firedFromplayer){
 			spawnPosition = new Vector2(Program.player.position + 23, Program.player.rect.y - 50);
 		}else{
@@ -302,7 +299,7 @@ class Enemy{
 	public Vector2 position;
 	public bool exists;
 
-	public int type; //Describes the enemies type, 0 - crab, 1 - squid
+	public int type; //Describes the enemies type, 1 - crab, 0 - squid
 	public int scoreFactor; //The amount of score the player earns when this is killed
 
 	System.Timers.Timer fireProjectileTimer;
@@ -339,7 +336,7 @@ class Enemy{
 			Program.player.rect.x = Program.player.position;
 			LevelLogic.currentLevel = 0;
 			foreach(var enemy in ObjectLogic.enemies) enemy.exists = false;
-			foreach (var projectiles in ObjectLogic.projectiles) projectiles.exists = false;
+			ObjectLogic.ClearProjectiles();
 			ObjectLogic.queuedProjectiles.Clear();
 			LevelLogic.Cycle();
 			Program.player.lives = 3;
