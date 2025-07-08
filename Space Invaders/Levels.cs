@@ -95,6 +95,7 @@ class LevelLogic{
 
 	//Start the next level
 	public static void Cycle(){
+		ObjectLogic.ClearEnemies();
 		if (currentLevel < levels.Length) levels[currentLevel].Start();
 		else {
 			currentLevel = 0;

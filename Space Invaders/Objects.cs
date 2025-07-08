@@ -2,7 +2,8 @@
 
 	A few words on how collision detection works, because it is kinda retarded and doesn't make that much sense:
 
-	In every case where I need collision detection I take the objects I am checking from position, find out it's "other sides coordinates" by adding its width and height. I do the same for the object I try to collide with and find out if that objects coordinates are in between this ones.
+	In every case where I need collision detection I take the objects I am checking from position, find out it's "other sides coordinates" by adding its width and height.
+	I do the same for the object I try to collide with and find out if that objects coordinates are in between this ones.
 
 */
 
@@ -50,6 +51,7 @@ static class ObjectLogic{
 					PlayerDied();
 					Program.player.lives = 3;
 					Program.player.score = 0;
+					ClearEnemies();
 					break;
 				}else{
 					Program.player.lives--;
@@ -75,6 +77,7 @@ static class ObjectLogic{
 				enemy.exists = false;
 				LevelLogic.CheckIfAllKilled();
 				Program.player.score += enemy.scoreFactor;
+				ClearEnemies();
 				break;
 			}
 		}
@@ -84,15 +87,17 @@ static class ObjectLogic{
 
 		//Remove the projectile not needed anymore
 		projectiles.RemoveAll(projectile => !projectile.exists);
-		ClearEnemies();
 
 		foreach (var element in UIelements) element.Render();
 
 	}
 
+	//foreach enemy position in the current level, create a new enemy
 	public static void AddEnemies(Vector2[] enemyPositions){
 		enemies = new Enemy[enemyPositions.Count()];
 		for (int i = 0; i < enemies.Count(); i++){
+
+			//Choose what type of enemy this is
 			switch((int)enemyPositions[i].Y){
 				case 100:
 					enemies[i] = new Enemy(enemyPositions[i], 1);
@@ -111,7 +116,7 @@ static class ObjectLogic{
 
 	}
 
-	static void ClearEnemies(){
+	public static void ClearEnemies(){
 		enemies = Array.FindAll(enemies, (enemy => enemy.exists)).ToArray();
 	}
 
