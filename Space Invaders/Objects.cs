@@ -1,5 +1,4 @@
 /*
-
 	A few words on how collision detection works, because it is kinda retarded and doesn't make that much sense:
 
 	In every case where I need collision detection I take the objects I am checking from position, find out it's "other sides coordinates" by adding its width and height.
@@ -13,9 +12,8 @@ using static SDL2.SDL_ttf;
 using System.Numerics;
 using System.Timers;
 
-//Necesary logic for all object
+
 static class ObjectLogic{
-	
 	public static List<Projectile> projectiles = new List<Projectile>();
 	public static List<Projectile> queuedProjectiles = new List<Projectile>();
 	public static Enemy[] enemies = new Enemy[20];
@@ -43,6 +41,8 @@ static class ObjectLogic{
 
 		if (!playerDied) foreach(var projectile in projectiles){
 
+			if (projectile.sender is null){} 
+			else if (!projectile.sender.exists) continue;
 			projectile.Loop();
 
 			if (projectile.HitPlayer()){
@@ -74,7 +74,6 @@ static class ObjectLogic{
 			enemy.Render();
 			if (enemy.WasHit()){
 				Program.player.amountOfKills++;
-				enemy.exists = false;
 				ClearEnemies();
 				LevelLogic.CheckIfAllKilled();
 				Program.player.score += enemy.scoreFactor;
@@ -82,10 +81,11 @@ static class ObjectLogic{
 			}
 		}
 
+		queuedProjectiles.RemoveAll(projectile => !projectile.exists);
+
 		projectiles.AddRange(queuedProjectiles);
 		queuedProjectiles.Clear();
 
-		//Remove the projectile not needed anymore
 		projectiles.RemoveAll(projectile => !projectile.exists);
 
 		foreach (var element in UIelements) element.Render();
@@ -93,27 +93,8 @@ static class ObjectLogic{
 	}
 
 	//foreach enemy position in the current level, create a new enemy
-	public static void AddEnemies(Vector2[] enemyPositions){
-		enemies = new Enemy[enemyPositions.Count()];
-		for (int i = 0; i < enemies.Count(); i++){
-
-			//Choose what type of enemy this is
-			switch((int)enemyPositions[i].Y){
-				case 100:
-					enemies[i] = new Enemy(enemyPositions[i], 1);
-				break;
-
-				case 200:
-					enemies[i] = new Enemy(enemyPositions[i], 0);
-				break;
-
-				default:
-					Console.WriteLine($"Unhandled Y value: {enemyPositions[i].Y}");
-					enemies[i] = new Enemy(enemyPositions[i], 1);
-				break;
-			}
-		}
-
+	public static void AddEnemies(Enemy[] levelEnemies){
+		enemies = levelEnemies;
 	}
 
 	public static void ClearEnemies(){
@@ -133,6 +114,7 @@ static class ObjectLogic{
 		foreach(var enemy in enemies) enemy.exists = false;
 		Program.player.position = Program.player.spawnPosition;
 		Program.player.rect.x = Program.player.position;
+		LevelLogic.Cycle();
 
 	}
 
@@ -207,7 +189,7 @@ class Player : IObjects{
 	}
 
 	public void FireProjectile(){
-		ObjectLogic.projectiles.Add(new Projectile(true, new Vector2(0, 0))); 
+		ObjectLogic.projectiles.Add(new Projectile(true, new Vector2(0, 0), null)); 
 	}
 }
 
@@ -219,11 +201,13 @@ class Projectile{
 	public SDL_Rect rect;
 
 	Vector2 spawnPosition;
+	public Enemy? sender;
 
 	//Parameter is to know in which direction to go and what position to spawn at
-	public Projectile(bool isActivatedbyPlayer, Vector2 enemyPosition){
+	public Projectile(bool isActivatedbyPlayer, Vector2 enemyPosition, Enemy? inSender){
 		exists = true;
 		firedFromplayer = isActivatedbyPlayer; 
+		sender = inSender;
 		if (firedFromplayer){
 			spawnPosition = new Vector2(Program.player.position + 23, Program.player.rect.y - 50);
 		}else{
@@ -247,7 +231,6 @@ class Projectile{
 		}
 	}
 
-	//Check if hit the player in order to activate his death logic
 	public bool HitPlayer(){
 		int Xbegin = (int)spawnPosition.X;
 		int Xend = Xbegin + rect.w;
@@ -299,13 +282,12 @@ class Enemy{
 	public Vector2 position;
 	public bool exists;
 
-	public int type; //Describes the enemies type, 1 - crab, 0 - squid
 	public int scoreFactor; //The amount of score the player earns when this is killed
 
 	System.Timers.Timer fireProjectileTimer;
 	Random timeBetweenShots; //A random factor for each enemies time in between shots
 
-	static System.Timers.Timer moveTimer = new System.Timers.Timer(6000); //When reaches 0, move the enemies
+	static System.Timers.Timer moveTimer = new System.Timers.Timer(6000);
 	
 	int enemyXbegin;
 	int enemyXend;
@@ -324,7 +306,7 @@ class Enemy{
 	static void Move(Object? source, ElapsedEventArgs e){
 		foreach(var enemy in ObjectLogic.enemies){
 			enemy.position.X += 70;
-			if (enemy.position.X >= 730){
+			if (enemy.position.X > 730){
 				enemy.position.Y += 100;
 				enemy.position.X = 100;
 			}
@@ -351,18 +333,14 @@ class Enemy{
 	}
 
 	//Parameter name starts with in because I have another variable with the same name
-	public Enemy(Vector2 inPos, int inType){
+	public Enemy(){
 		exists = true;
-		position = inPos;
-		type = inType;
 
 		UpdateDataCoordinates();
 
 		timeBetweenShots = new Random();
 		fireProjectileTimer = new System.Timers.Timer(timeBetweenShots.Next(5, 20) * 1000);
-		fireProjectileTimer.Elapsed += FireProjectile;
-		fireProjectileTimer.Start();
-
+		
 		rect = new SDL_Rect{
 			x = (int)position.X,
 			y = (int)position.Y,
@@ -370,7 +348,6 @@ class Enemy{
 			h = 25 
 		};
 
-		Setup();
 	}
 
 	public void UpdateDataCoordinates(){
@@ -386,22 +363,11 @@ class Enemy{
 	//Fire projectile when timer reaches 0
 	void FireProjectile(Object? source, ElapsedEventArgs e){
 		if (!exists) return;
-		ObjectLogic.queuedProjectiles.Add(new Projectile(false, position)); 
+		ObjectLogic.queuedProjectiles.Add(new Projectile(false, position, this)); 
 	}
 
 	//Load all necesary assets for displaying to screen
-	void Setup(){
-		switch(type){
-			case 1:
-				surface = IMG_Load("Dependencies/Crab.png");
-				scoreFactor = 3;
-			break;
-
-			case 0:
-				surface = IMG_Load("Dependencies/Squid.png");
-				scoreFactor = 1;
-			break;
-		}
+	public virtual void Setup(){
 		if (surface == IntPtr.Zero) Console.WriteLine($"There was a problem creating the enemy surface: {SDL_GetError()}");
 		texture = SDL_CreateTextureFromSurface(Window.renderer, surface);
 		if (texture == IntPtr.Zero) Console.WriteLine($"There was a problem creating the enemy texture: {SDL_GetError()}");
@@ -411,11 +377,10 @@ class Enemy{
 	
 	//Check if was hit by player projectile
 	public bool WasHit(){
-		bool wasKilled = false;
 		
 		UpdateDataCoordinates();
 		foreach(var projectile in ObjectLogic.projectiles){
-			if (wasKilled || !projectile.firedFromplayer) break;
+			if (!exists || !projectile.firedFromplayer) continue;
 
 			int Xbegin = projectile.rect.x;
 			int Xend = Xbegin + projectile.rect.w;
@@ -432,8 +397,8 @@ class Enemy{
 			//If the incoming projectile is in between the X and Y coordinates of the enemy
 			if (Xbegin >= enemyXbegin && Xend <= enemyXend && Ybegin <= enemyYend && Ybegin >= enemyYbegin){
 				StopFiring();
+				exists = false;
 				KillProjectile(projectile);
-				wasKilled = true;
 				return true;
 			}
 
@@ -463,8 +428,48 @@ class Enemy{
 	}
 
 	public static void CleanUp(){
-		foreach (var enemy in ObjectLogic.enemies) SDL_DestroyTexture(enemy.texture);
+		foreach (var enemy in ObjectLogic.enemies){
+			SDL_DestroyTexture(enemy.texture);
+			enemy.StopFiring();
+		}
 	}
+
+	public class Type : Enemy{
+		public class Crab : Type{
+			public Crab(){
+				scoreFactor = 3;
+				fireProjectileTimer.Elapsed += FireProjectile;
+				fireProjectileTimer.Start();
+				Setup();
+
+			}
+
+        		public override void Setup()
+        		{
+				surface = IMG_Load("Dependencies/Crab.png");
+            			base.Setup();
+        		}
+
+		}
+
+		public class Squid : Type{
+			public Squid(){
+				scoreFactor = 1;
+				fireProjectileTimer.Elapsed += FireProjectile;
+				fireProjectileTimer.Start();
+				Setup();
+			}
+
+        		public override void Setup()
+        		{
+				surface = IMG_Load("Dependencies/Squid.png");
+            			base.Setup();
+        		}
+    
+		}
+	}
+
+	
 }
 
 class UI : IObjects {
