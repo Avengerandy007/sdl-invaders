@@ -341,6 +341,9 @@ class Enemy{
 		timeBetweenShots = new Random();
 		fireProjectileTimer = new System.Timers.Timer(timeBetweenShots.Next(5, 20) * 1000);
 		
+		fireProjectileTimer.Elapsed += FireProjectile;
+		fireProjectileTimer.Start();
+
 		rect = new SDL_Rect{
 			x = (int)position.X,
 			y = (int)position.Y,
@@ -348,6 +351,7 @@ class Enemy{
 			h = 25 
 		};
 
+		Setup();
 	}
 
 	public void UpdateDataCoordinates(){
@@ -435,13 +439,11 @@ class Enemy{
 	}
 
 	public class Type : Enemy{
+
 		public class Crab : Type{
+
 			public Crab(){
 				scoreFactor = 3;
-				fireProjectileTimer.Elapsed += FireProjectile;
-				fireProjectileTimer.Start();
-				Setup();
-
 			}
 
         		public override void Setup()
@@ -453,11 +455,9 @@ class Enemy{
 		}
 
 		public class Squid : Type{
+
 			public Squid(){
 				scoreFactor = 1;
-				fireProjectileTimer.Elapsed += FireProjectile;
-				fireProjectileTimer.Start();
-				Setup();
 			}
 
         		public override void Setup()
