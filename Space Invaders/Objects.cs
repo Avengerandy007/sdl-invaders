@@ -11,6 +11,7 @@ using static SDL2.SDL_image;
 using static SDL2.SDL_ttf;
 using System.Numerics;
 using System.Timers;
+using Enemies;
 
 
 static class ObjectLogic{
@@ -272,204 +273,202 @@ class Projectile{
 	}
 }
 
-class Enemy{
+namespace Enemies{
+	class Enemy{
 
-	IntPtr surface;
-	IntPtr texture;
-	SDL_Rect rect;
+		protected IntPtr surface;
+		IntPtr texture;
+		SDL_Rect rect;
 
 
-	public Vector2 position;
-	public bool exists;
+		public Vector2 position;
+		public bool exists;
 
-	public int scoreFactor; //The amount of score the player earns when this is killed
+		public int scoreFactor; //The amount of score the player earns when this is killed
 
-	System.Timers.Timer fireProjectileTimer;
-	Random timeBetweenShots; //A random factor for each enemies time in between shots
+		System.Timers.Timer fireProjectileTimer;
+		Random timeBetweenShots; //A random factor for each enemies time in between shots
 
-	static System.Timers.Timer moveTimer = new System.Timers.Timer(6000);
+		static System.Timers.Timer moveTimer = new System.Timers.Timer(6000);
 	
-	int enemyXbegin;
-	int enemyXend;
+		int enemyXbegin;
+		int enemyXend;
 
-	int enemyYbegin;
-	int enemyYend;
+		int enemyYbegin;
+		int enemyYend;
 
 
-	//Initialise the timers logic
-	public static void MoveTimerStart(){
-		moveTimer.Elapsed += Move;
-		moveTimer.Start();
-	}
-
-	//Move every enemy 70 pixel to the right, when further than 730, move 100 pixels up(down)
-	static void Move(Object? source, ElapsedEventArgs e){
-		foreach(var enemy in ObjectLogic.enemies){
-			enemy.position.X += 70;
-			if (enemy.position.X > 730){
-				enemy.position.Y += 100;
-				enemy.position.X = 100;
-			}
+		//Initialise the timers logic
+		public static void MoveTimerStart(){
+			moveTimer.Elapsed += Move;
+			moveTimer.Start();
 		}
 
-		//Check if this is below a certain treshold and then reset completely the player
-		if (ObjectLogic.enemies.Last().position.Y >= 450){
-			Program.player.position = Program.player.spawnPosition;
-			Program.player.rect.x = Program.player.position;
-			LevelLogic.currentLevel = 0;
-			foreach(var enemy in ObjectLogic.enemies) enemy.exists = false;
-			ObjectLogic.ClearProjectiles();
-			ObjectLogic.queuedProjectiles.Clear();
-			LevelLogic.Cycle();
-			Program.player.lives = 3;
-		} 
-	}
+		//Move every enemy 70 pixel to the right, when further than 730, move 100 pixels up(down)
+		static void Move(Object? source, ElapsedEventArgs e){
+			foreach(var enemy in ObjectLogic.enemies){
+				enemy.position.X += 70;
+				if (enemy.position.X > 730){
+					enemy.position.Y += 100;
+					enemy.position.X = 100;
+				}
+			}
+
+			//Check if this is below a certain treshold and then reset completely the player
+			if (ObjectLogic.enemies.Last().position.Y >= 450){
+				Program.player.position = Program.player.spawnPosition;
+				Program.player.rect.x = Program.player.position;
+				LevelLogic.currentLevel = 0;
+				foreach(var enemy in ObjectLogic.enemies) enemy.exists = false;
+				ObjectLogic.ClearProjectiles();
+				ObjectLogic.queuedProjectiles.Clear();
+				LevelLogic.Cycle();
+				Program.player.lives = 3;
+			} 
+		}
 
 
-	public static void DestroyTimer(){
-		moveTimer.Elapsed -= Move;
-		moveTimer.Stop();
-		moveTimer.Dispose();
-	}
+		public static void DestroyTimer(){
+			moveTimer.Elapsed -= Move;
+			moveTimer.Stop();
+			moveTimer.Dispose();
+		}
 
-	//Parameter name starts with in because I have another variable with the same name
-	public Enemy(){
-		exists = true;
+		//Parameter name starts with in because I have another variable with the same name
+		public Enemy(){
+			exists = true;
 
-		UpdateDataCoordinates();
+			UpdateDataCoordinates();
 
-		timeBetweenShots = new Random();
-		fireProjectileTimer = new System.Timers.Timer(timeBetweenShots.Next(5, 20) * 1000);
+			timeBetweenShots = new Random();
+			fireProjectileTimer = new System.Timers.Timer(timeBetweenShots.Next(5, 20) * 1000);
 		
-		fireProjectileTimer.Elapsed += FireProjectile;
-		fireProjectileTimer.Start();
+			fireProjectileTimer.Elapsed += FireProjectile;
+			fireProjectileTimer.Start();
 
-		rect = new SDL_Rect{
-			x = (int)position.X,
-			y = (int)position.Y,
-			w = 50,
-			h = 25 
-		};
+			rect = new SDL_Rect{
+				x = (int)position.X,
+				y = (int)position.Y,
+				w = 50,
+				h = 25 
+			};
 
-		Setup();
-	}
+			Setup();
+		}
 
-	public void UpdateDataCoordinates(){
+		public void UpdateDataCoordinates(){
 		
-		enemyXbegin = (int)position.X;
-		enemyXend = enemyXbegin + rect.w;
+			enemyXbegin = (int)position.X;
+			enemyXend = enemyXbegin + rect.w;
 
-		enemyYbegin = (int)position.Y;
-		enemyYend = enemyYbegin + rect.h;
+			enemyYbegin = (int)position.Y;
+			enemyYend = enemyYbegin + rect.h;
 
-	}
+		}
 
-	//Fire projectile when timer reaches 0
-	void FireProjectile(Object? source, ElapsedEventArgs e){
-		if (!exists) return;
-		ObjectLogic.queuedProjectiles.Add(new Projectile(false, position, this)); 
-	}
+		//Fire projectile when timer reaches 0
+		void FireProjectile(Object? source, ElapsedEventArgs e){
+			if (!exists) return;
+			ObjectLogic.queuedProjectiles.Add(new Projectile(false, position, this)); 
+		}
 
-	//Load all necesary assets for displaying to screen
-	public virtual void Setup(){
-		if (surface == IntPtr.Zero) Console.WriteLine($"There was a problem creating the enemy surface: {SDL_GetError()}");
-		texture = SDL_CreateTextureFromSurface(Window.renderer, surface);
-		if (texture == IntPtr.Zero) Console.WriteLine($"There was a problem creating the enemy texture: {SDL_GetError()}");
-		SDL_FreeSurface(surface);
-	}
+		//Load all necesary assets for displaying to screen
+		public virtual void Setup(){
+			if (surface == IntPtr.Zero) Console.WriteLine($"There was a problem creating the enemy surface: {SDL_GetError()}");
+			texture = SDL_CreateTextureFromSurface(Window.renderer, surface);
+			if (texture == IntPtr.Zero) Console.WriteLine($"There was a problem creating the enemy texture: {SDL_GetError()}");
+			SDL_FreeSurface(surface);
+		}
 
 	
-	//Check if was hit by player projectile
-	public bool WasHit(){
+		//Check if was hit by player projectile
+		public bool WasHit(){
 		
-		UpdateDataCoordinates();
-		foreach(var projectile in ObjectLogic.projectiles){
-			if (!exists || !projectile.firedFromplayer) continue;
+			UpdateDataCoordinates();
+			foreach(var projectile in ObjectLogic.projectiles){
+				if (!exists || !projectile.firedFromplayer) continue;
 
-			int Xbegin = projectile.rect.x;
-			int Xend = Xbegin + projectile.rect.w;
+				int Xbegin = projectile.rect.x;
+				int Xend = Xbegin + projectile.rect.w;
 
-			int Ybegin = projectile.rect.y;
-			int Yend = Ybegin + projectile.rect.h;
+				int Ybegin = projectile.rect.y;
+				int Yend = Ybegin + projectile.rect.h;
 
-			int disX = Xend - enemyXbegin;
-			int disY = Yend - enemyYbegin;
-			double distance = Math.Sqrt(Math.Pow(disX, 2) + Math.Pow(disY, 2));
+				int disX = Xend - enemyXbegin;
+				int disY = Yend - enemyYbegin;
+				double distance = Math.Sqrt(Math.Pow(disX, 2) + Math.Pow(disY, 2));
 
-			if (distance > 80) continue;
+				if (distance > 80) continue;
 			
-			//If the incoming projectile is in between the X and Y coordinates of the enemy
-			if (Xbegin >= enemyXbegin && Xend <= enemyXend && Ybegin <= enemyYend && Ybegin >= enemyYbegin){
-				StopFiring();
-				exists = false;
-				KillProjectile(projectile);
-				return true;
+				//If the incoming projectile is in between the X and Y coordinates of the enemy
+				if (Xbegin >= enemyXbegin && Xend <= enemyXend && Ybegin <= enemyYend && Ybegin >= enemyYbegin){
+					StopFiring();
+					exists = false;
+					KillProjectile(projectile);
+					return true;
+				}
+
 			}
 
+			return false;
 		}
 
-		return false;
-	}
-
-	//Destroy the projectile that killed this
-	void KillProjectile(Projectile projectile){
-		projectile.exists = false;
-	}
-
-	//Dispose of the firing timers logic
-	public void StopFiring(){
-		fireProjectileTimer.Elapsed -= FireProjectile;
-		fireProjectileTimer.Stop();
-		fireProjectileTimer.Dispose();
-	}
-
-	//Render the enemy to the screen each frame and change its position acordingly
-	public void Render(){
-		rect.x = (int)position.X;
-		rect.y = (int)position.Y;
-		if (texture == IntPtr.Zero) Console.WriteLine($"There was a problem maintaining the texture: {SDL_GetError()}");
-		SDL_RenderCopy(Window.renderer, texture, IntPtr.Zero, ref rect);
-	}
-
-	public static void CleanUp(){
-		foreach (var enemy in ObjectLogic.enemies){
-			SDL_DestroyTexture(enemy.texture);
-			enemy.StopFiring();
+		//Destroy the projectile that killed this
+		void KillProjectile(Projectile projectile){
+			projectile.exists = false;
 		}
-	}
 
-	public class Type : Enemy{
+		//Dispose of the firing timers logic
+		public void StopFiring(){
+			fireProjectileTimer.Elapsed -= FireProjectile;
+			fireProjectileTimer.Stop();
+			fireProjectileTimer.Dispose();
+		}
 
-		public class Crab : Type{
+		//Render the enemy to the screen each frame and change its position acordingly
+		public void Render(){
+			rect.x = (int)position.X;
+			rect.y = (int)position.Y;
+			if (texture == IntPtr.Zero) Console.WriteLine($"There was a problem maintaining the texture: {SDL_GetError()}");
+			SDL_RenderCopy(Window.renderer, texture, IntPtr.Zero, ref rect);
+		}
 
-			public Crab(){
-				scoreFactor = 3;
+		public static void CleanUp(){
+			foreach (var enemy in ObjectLogic.enemies){
+				SDL_DestroyTexture(enemy.texture);
+				enemy.StopFiring();
 			}
+		}
+	}
+}
+namespace Enemies.Types{
+	class Crab : Enemy{
 
-        		public override void Setup()
-        		{
-				surface = IMG_Load("Dependencies/Crab.png");
-            			base.Setup();
-        		}
-
+		public Crab(){
+			scoreFactor = 3;
 		}
 
-		public class Squid : Type{
+       		public override void Setup()
+       		{
+			surface = IMG_Load("Dependencies/Crab.png");
+          		base.Setup();
+        	}
 
-			public Squid(){
-				scoreFactor = 1;
-			}
+	}
 
-        		public override void Setup()
-        		{
-				surface = IMG_Load("Dependencies/Squid.png");
-            			base.Setup();
-        		}
+	class Squid : Enemy{
+
+		public Squid(){
+			scoreFactor = 1;
+		}
+
+       		public override void Setup()
+       		{
+			surface = IMG_Load("Dependencies/Squid.png");
+            		base.Setup();
+        	}
     
-		}
-	}
-
-	
+	}	
 }
 
 class UI : IObjects {
