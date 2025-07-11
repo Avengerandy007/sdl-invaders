@@ -93,6 +93,27 @@ static class ObjectLogic{
 
 	}
 
+	public static bool CheckForCollisions(SDL_Rect objectA, SDL_Rect objectB){
+		
+		//object A X beginning
+		int aXb = objectA.x;
+		//object A X end
+		int aXe = aXb + objectA.w;
+		int aYb = objectA.y;
+		int aYe = aYb + objectA.h;
+
+		//object B X beginning
+		int bXb = objectB.x;
+		//object B X end
+		int bXe = bXb + objectB.w;
+		int bYb = objectB.y;
+		int bYe = bYb + objectB.h;
+
+		if (aXb >= bXb && aXe <= bXe && aYb <= bYe && aYe >= bYb) return true;
+
+		return false;
+	}
+
 	//foreach enemy position in the current level, create a new enemy
 	public static void AddEnemies(Enemy[] levelEnemies){
 		enemies = levelEnemies;
@@ -136,12 +157,7 @@ class Player : IObjects{
 	IntPtr surface;
 	IntPtr texture;
 	public SDL_Rect rect;
-
-	public int position; //Describes the players position along the X axis
-	public int spawnPosition;
-	public int lives = 3;
-	public int score = 0;
-	
+		
 	//Loads all the SDL necities to display the player sprite
 	public void Setup(){
 
@@ -178,6 +194,11 @@ class Player : IObjects{
 	#endregion
 
 	public int amountOfKills;
+	public int position; //Describes the players position along the X axis
+	public int spawnPosition;
+	public int lives = 3;
+	public int score = 0;
+
 
 	//If is called with true then move left otherwise right
 	public void Move(bool left){
@@ -233,21 +254,10 @@ class Projectile{
 	}
 
 	public bool HitPlayer(){
-		int Xbegin = (int)spawnPosition.X;
-		int Xend = Xbegin + rect.w;
-
-		int Ybegin = rect.y;
-		int Yend = Ybegin + rect.h;
-
-		int pXbegin = Program.player.rect.x;
-		int pXend = pXbegin + Program.player.rect.w;
-
-		int pYbegin = Program.player.rect.y;
-
 		if (firedFromplayer){
 			return false;
 		}else{
-			if (Xbegin >= pXbegin && Xend <= pXend && Yend >= pYbegin) return true;
+			if (ObjectLogic.CheckForCollisions(rect, Program.player.rect)) return true;
 		}
 
 		return false;
@@ -388,11 +398,9 @@ namespace Enemies{
 			foreach(var projectile in ObjectLogic.projectiles){
 				if (!exists || !projectile.firedFromplayer) continue;
 
-				int Xbegin = projectile.rect.x;
-				int Xend = Xbegin + projectile.rect.w;
+				int Xend = projectile.rect.x + projectile.rect.w;
 
-				int Ybegin = projectile.rect.y;
-				int Yend = Ybegin + projectile.rect.h;
+				int Yend = projectile.rect.y + projectile.rect.h;
 
 				int disX = Xend - enemyXbegin;
 				int disY = Yend - enemyYbegin;
@@ -401,7 +409,7 @@ namespace Enemies{
 				if (distance > 80) continue;
 			
 				//If the incoming projectile is in between the X and Y coordinates of the enemy
-				if (Xbegin >= enemyXbegin && Xend <= enemyXend && Ybegin <= enemyYend && Ybegin >= enemyYbegin){
+				if (ObjectLogic.CheckForCollisions(projectile.rect, rect)){
 					StopFiring();
 					exists = false;
 					KillProjectile(projectile);
