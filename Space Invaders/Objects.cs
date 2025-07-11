@@ -24,13 +24,11 @@ static class ObjectLogic{
 	public static void Setup(){
 		IMG_Init(IMG_InitFlags.IMG_INIT_PNG);
 		TTF_Init();
-		Enemy.MoveTimerStart();
 	}
 
-	static bool playerDied = false;
+	public static bool gameReset = false;
 
-	public static void RenderObjects(){
-
+	public static void Update(){
 		
 		Program.player.Render();
 
@@ -40,35 +38,32 @@ static class ObjectLogic{
 		Program.score.variableToDisplay = Program.player.score;
 		#endregion
 
-		if (!playerDied) foreach(var projectile in projectiles){
+		if (!gameReset){
 
-			if (projectile.sender is null){} 
-			else if (!projectile.sender.exists) continue;
-			projectile.Loop();
+			foreach(var projectile in projectiles){
 
-			if (projectile.HitPlayer()){
-				if (Program.player.lives == 0){
-					playerDied = true;
-					PlayerDied();
-					Program.player.lives = 3;
-					Program.player.score = 0;
-					ClearEnemies();
-					break;
-				}else{
-					Program.player.lives--;
-					ClearProjectiles();
-					Program.player.position = Program.player.spawnPosition;
-					Program.player.rect.x = Program.player.position;
-					break;
+				if (projectile.sender is null){} 
+				else if (!projectile.sender.exists) continue;
+			
+				projectile.Loop();
+
+				if (projectile.HitPlayer()){
+					if (Program.player.lives == 0){
+						Program.player.ResetGame();
+						break;
+					}else{
+						Program.player.lives--;
+						ClearProjectiles();
+						Program.player.ResetPosition();
+						break;
+					}
 				}
-			}
 
-		}else{
-			ClearProjectiles();
-			LevelLogic.Cycle();
-			queuedProjectiles.Clear();
-			playerDied = false;
+			}
 		}
+
+		Enemy.framesUntilMove--;
+		Enemy.Move();
 
 		foreach(var enemy in enemies){
 			if (enemy is null) continue;
@@ -127,21 +122,14 @@ static class ObjectLogic{
 		foreach(var projectile in projectiles) projectile.exists = false;
 	}
 
-	static void PlayerDied(){
+	public static void RestartScene(){
 		foreach (var enemy in enemies) enemy.StopFiring();
-		queuedProjectiles.Clear();
-		foreach (var projectile in projectiles) projectile.exists = false;
-		LevelLogic.currentLevel = 0;
-		Program.player.amountOfKills = 0;
-		foreach(var enemy in enemies) enemy.exists = false;
-		Program.player.position = Program.player.spawnPosition;
-		Program.player.rect.x = Program.player.position;
+		Projectile.DestroyAllProjectiles();
 		LevelLogic.Cycle();
 
 	}
 
 	public static void CleanObjects(){
-		Enemy.DestroyTimer();
 		Program.player.CleanUp();
 		Enemy.CleanUp();
 		foreach (var element in UIelements) element.CleanUp();
@@ -213,6 +201,26 @@ class Player : IObjects{
 	public void FireProjectile(){
 		ObjectLogic.projectiles.Add(new Projectile(true, new Vector2(0, 0), null)); 
 	}
+
+	public void ResetPosition(){
+		position = spawnPosition;
+		rect.x = position;
+	}
+
+	public void ResetGame(){
+		ObjectLogic.gameReset = true;
+		ResetPosition();
+		LevelLogic.currentLevel = 0;
+		score = 0;
+		amountOfKills = 0;
+		Enemy.DestroyAllEnemies();
+		ObjectLogic.ClearProjectiles();
+		ObjectLogic.ClearEnemies();
+		ObjectLogic.queuedProjectiles.Clear();
+		lives = 3;
+		ObjectLogic.RestartScene();
+		ObjectLogic.gameReset = false;
+	}
 }
 
 class Projectile{
@@ -275,6 +283,12 @@ class Projectile{
 		}
 	}
 
+	public static void DestroyAllProjectiles(){
+		foreach(var projectile in ObjectLogic.projectiles) projectile.exists = false;
+		ObjectLogic.ClearProjectiles();
+		ObjectLogic.queuedProjectiles.Clear();
+	}
+
 	void Render(){
 		SDL_SetRenderDrawColor(Window.renderer, 255, 255, 255, 255);
 		SDL_RenderDrawRect(Window.renderer, ref rect);
@@ -299,8 +313,9 @@ namespace Enemies{
 		System.Timers.Timer fireProjectileTimer;
 		Random timeBetweenShots; //A random factor for each enemies time in between shots
 
-		static System.Timers.Timer moveTimer = new System.Timers.Timer(6000);
-	
+		const int intialFramesUntilMovement = 825;
+		public static int framesUntilMove = intialFramesUntilMovement;
+
 		int enemyXbegin;
 		int enemyXend;
 
@@ -308,14 +323,9 @@ namespace Enemies{
 		int enemyYend;
 
 
-		//Initialise the timers logic
-		public static void MoveTimerStart(){
-			moveTimer.Elapsed += Move;
-			moveTimer.Start();
-		}
-
 		//Move every enemy 70 pixel to the right, when further than 730, move 100 pixels up(down)
-		static void Move(Object? source, ElapsedEventArgs e){
+		public static void Move(){
+			if (framesUntilMove != 0) return;
 			foreach(var enemy in ObjectLogic.enemies){
 				enemy.position.X += 70;
 				if (enemy.position.X > 730){
@@ -323,25 +333,17 @@ namespace Enemies{
 					enemy.position.X = 100;
 				}
 			}
-
+			framesUntilMove = intialFramesUntilMovement;
+			
 			//Check if this is below a certain treshold and then reset completely the player
-			if (ObjectLogic.enemies.Last().position.Y >= 450){
-				Program.player.position = Program.player.spawnPosition;
-				Program.player.rect.x = Program.player.position;
-				LevelLogic.currentLevel = 0;
-				foreach(var enemy in ObjectLogic.enemies) enemy.exists = false;
-				ObjectLogic.ClearProjectiles();
-				ObjectLogic.queuedProjectiles.Clear();
-				LevelLogic.Cycle();
-				Program.player.lives = 3;
+			if (CheckIfLastEnemyIsAtPlayerLevel()){
+				Program.player.ResetGame();
 			} 
 		}
 
-
-		public static void DestroyTimer(){
-			moveTimer.Elapsed -= Move;
-			moveTimer.Stop();
-			moveTimer.Dispose();
+		static bool CheckIfLastEnemyIsAtPlayerLevel(){
+			if (ObjectLogic.enemies.Last().position.Y >= 450) return true;
+			return false;
 		}
 
 		//Parameter name starts with in because I have another variable with the same name
@@ -351,7 +353,7 @@ namespace Enemies{
 			UpdateDataCoordinates();
 
 			timeBetweenShots = new Random();
-			fireProjectileTimer = new System.Timers.Timer(timeBetweenShots.Next(5, 20) * 1000);
+			fireProjectileTimer = new System.Timers.Timer(timeBetweenShots.Next(2, 20) * 1000);
 		
 			fireProjectileTimer.Elapsed += FireProjectile;
 			fireProjectileTimer.Start();
@@ -374,6 +376,10 @@ namespace Enemies{
 			enemyYbegin = (int)position.Y;
 			enemyYend = enemyYbegin + rect.h;
 
+		}
+
+		public static void DestroyAllEnemies(){
+			foreach(var enemy in ObjectLogic.enemies) enemy.exists = false;
 		}
 
 		//Fire projectile when timer reaches 0
