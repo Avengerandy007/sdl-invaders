@@ -68,7 +68,6 @@ static class ObjectLogic{
 				Program.player.score += enemy.scoreFactor;
 				if (Program.player.score >= Program.player.highscore){
 					Program.player.highscore = Program.player.score;
-					Program.player.UpdateHighscore(false);
 				}
 				break;
 			}

@@ -14,6 +14,7 @@ class Program{
 		player.Setup();
 		LevelLogic.levels[LevelLogic.currentLevel].Start();
 		Window.MainLoop();
+		player.UpdateHighscore(false);
 	}
 }
 
