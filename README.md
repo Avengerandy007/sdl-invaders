@@ -1,7 +1,7 @@
 ## About
 This "project" if you would like to call it that is supposed to give me a learning oportunity on the library SDL and more generaly native game development. I tried making a simple clone of the famous "Space Invaders" game, developed by Taito.
 
-![image](https://github.com/user-attachments/assets/577e56a4-24a3-4701-8cee-7502569fbc2a)
+<img width="833" height="633" alt="image" src="https://github.com/user-attachments/assets/db5f431a-861f-421f-8ad9-76825fa5e52f" />
 
 As you can see from the image, it doesn't feature all that much. I am willing to continue working on it but for now this is it.
 
