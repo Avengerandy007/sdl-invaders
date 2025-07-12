@@ -1,11 +1,3 @@
-/*
-	A few words on how collision detection works, because it is kinda retarded and doesn't make that much sense:
-
-	In every case where I need collision detection I take the objects I am checking from position, find out it's "other sides coordinates" by adding its width and height.
-	I do the same for the object I try to collide with and find out if that objects coordinates are in between this ones.
-
-*/
-
 using static SDL2.SDL;
 using static SDL2.SDL_image;
 using static SDL2.SDL_ttf;
@@ -18,7 +10,7 @@ static class ObjectLogic{
 	public static List<Projectile> projectiles = new List<Projectile>();
 	public static List<Projectile> queuedProjectiles = new List<Projectile>();
 	public static Enemy[] enemies = new Enemy[20];
-	public static UI[] UIelements = {Program.level, Program.lives, Program.score};
+	public static UI[] UIelements = {Program.level, Program.lives, Program.score, Program.highscore};
 
 	//Setup all needed sdl services and enemy logic
 	public static void Setup(){
@@ -36,6 +28,7 @@ static class ObjectLogic{
 		Program.lives.variableToDisplay = Program.player.lives;
 		Program.level.variableToDisplay = LevelLogic.currentLevel;
 		Program.score.variableToDisplay = Program.player.score;
+		Program.highscore.variableToDisplay = Program.player.highscore;
 		#endregion
 
 		if (!gameReset){
@@ -73,6 +66,10 @@ static class ObjectLogic{
 				ClearEnemies();
 				LevelLogic.CheckIfAllKilled();
 				Program.player.score += enemy.scoreFactor;
+				if (Program.player.score >= Program.player.highscore){
+					Program.player.highscore = Program.player.score;
+					Program.player.UpdateHighscore(false);
+				}
 				break;
 			}
 		}
@@ -170,6 +167,8 @@ class Player : IObjects{
 		};
 
 		position = rect.x;
+
+		highscore = UpdateHighscore(isReadingFile);
 	}
 
 	public void Render(){
@@ -186,7 +185,9 @@ class Player : IObjects{
 	public int spawnPosition;
 	public int lives = 3;
 	public int score = 0;
-
+	public int highscore;
+	public const bool isReadingFile = true;
+	public const bool isWritingFile = false;
 
 	//If is called with true then move left otherwise right
 	public void Move(bool left){
@@ -207,10 +208,31 @@ class Player : IObjects{
 		rect.x = position;
 	}
 
+	public int UpdateHighscore(bool reading){
+		string file = "SpaceInvaders.data";
+		try{
+			if (!reading){
+				if (score >= highscore){
+				 	File.WriteAllText(file, Convert.ToString(score));
+					highscore = score;
+				}
+			}else{
+				string text = File.ReadAllText(file);
+				return Convert.ToInt32(text);
+			}
+		}catch(IOException e){
+			Console.WriteLine($"There was a problem using the file system: {e.Message}");
+			return 0;
+		}	
+
+		return 0;
+	}
+
 	public void ResetGame(){
 		ObjectLogic.gameReset = true;
 		ResetPosition();
 		LevelLogic.currentLevel = 0;
+		UpdateHighscore(isWritingFile);
 		score = 0;
 		amountOfKills = 0;
 		Enemy.DestroyAllEnemies();
@@ -220,6 +242,7 @@ class Player : IObjects{
 		lives = 3;
 		ObjectLogic.RestartScene();
 		ObjectLogic.gameReset = false;
+		highscore = UpdateHighscore(isReadingFile);
 	}
 }
 

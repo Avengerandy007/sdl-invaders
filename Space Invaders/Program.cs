@@ -6,6 +6,7 @@ class Program{
 	public static UI lives = new UI("Lives: ", new Vector2(370, 600));
 	public static UI level = new UI("Level: ", new Vector2(20, 10));
 	public static UI score = new UI("Score: ", new Vector2(150, 10));
+	public static UI highscore = new UI("Hi-Score: ", new Vector2(270, 10));
 
 	public static void Main(){
 		Window.Setup();
